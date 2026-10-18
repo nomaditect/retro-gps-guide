@@ -85,8 +85,8 @@ def for_location(aps, limit=12):
 # ---------- joining ----------
 
 def connected():
-    st = run(["nmcli", "-t", "-f", "STATE", "general"], 5).strip()
-    return st.startswith("connected") and "site" not in st
+    """Really online. The USB cable to the Mac shows as "connected (local only)", which isn't."""
+    return run(["nmcli", "-t", "-f", "STATE", "general"], 5).strip() == "connected"
 
 
 def connect(networks, seen_ssids, wait_s=20):
