@@ -1,0 +1,17 @@
+[Unit]
+Description=Retro GPS, an eTrex-style trip logger
+# Start as early as possible: every second awake costs battery. NetworkManager comes up
+# alongside and the app waits for it before going online.
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service systemd-udevd.service
+Wants=systemd-modules-load.service NetworkManager.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/retrogps
+ExecStartPre=/bin/sh -c 'for i in $(seq 50); do [ -e /dev/i2c-1 ] && [ -e /dev/spidev0.0 ] && exit 0; sleep 0.1; done'
+ExecStart=/usr/bin/python3 -m retrogps.main
+Restart=no
+
+[Install]
+WantedBy=sysinit.target

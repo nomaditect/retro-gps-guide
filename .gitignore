@@ -1,0 +1,7 @@
+# Never commit real secrets or keys
+secrets.toml
+*.nmconnection
+__pycache__/
+*.pyc
+.DS_Store
+preview.png
