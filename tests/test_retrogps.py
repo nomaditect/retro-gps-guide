@@ -20,7 +20,7 @@ IW = """BSS 10:20:30:40:50:60(on wlan0)
 \tSSID: Cafe
 BSS 12:20:30:40:50:61(on wlan0) -- associated
 \tsignal: -40.00 dBm
-\tSSID: Simon Builds
+\tSSID: My Hotspot
 BSS a0:20:30:40:50:62(on wlan0)
 \tsignal: -55.00 dBm
 \tSSID: Library_nomap
