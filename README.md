@@ -1,5 +1,7 @@
 # Retro GPS
 
+![The finished device: a Pi Zero 2 W with the e-ink screen on top and a PiSugar battery underneath, showing the eTrex man marking waypoint 003 in Dublin](docs/device.jpg)
+
 ![Every page: mark, SkyView, map, waypoint, pointer, trip computer, weather, coffee, food, beer, to do, CrossFit, Eh? and menu](docs/screens.png)
 
 A Garmin eTrex H-style trip logger on a **Raspberry Pi Zero 2 W** with a **Waveshare 2.13" e-Paper HAT (V4)**, used upright (122×250, like the eTrex), and a **PiSugar 3** battery. It's the bigger sibling of the [Retro Canada Guide](https://github.com/nomaditect/retro-canada-guide) and does everything that does, with the eTrex's own pages added.
