@@ -13,11 +13,11 @@ from . import guide
 from .sayings import SAYINGS
 
 W, H = C.W, C.H
-PAGES = ("mark", "sky", "map", "waypoint", "pointer", "trip", "weather", "coffee", "food", "todo", "eh", "menu")
+PAGES = ("mark", "sky", "map", "waypoint", "pointer", "trip", "weather", "coffee", "food", "beer", "todo", "eh", "menu")
 MENU_ITEMS = ("MARK", "WAYPOINTS", "WEB MAP", "SETUP")
 SETUP_ITEMS = ("SYNC NOW", "ROTATE SCREEN", "NEW TRIP", "SLEEP NOW")
 ZOOMS = (None, 200, 500, 1000, 2000, 5000, 20000, 100000, 500000)  # metres per 100 px; None = auto
-TITLES = {"coffee": "COFFEE", "food": "FOOD", "todo": "TO DO"}
+TITLES = {"coffee": "COFFEE", "food": "FOOD", "beer": "BEER", "todo": "TO DO"}
 
 _fonts = {}
 
@@ -489,8 +489,9 @@ def page_places(c, s, ctx, kind):
         return
     places = (g.get("places") or {}).get(kind, [])
     if not places:
-        for i, l in enumerate(("Nothing within" if kind != "todo" else "Nothing listed",
-                               "walking distance." if kind != "todo" else "nearby.", "", "HOLD to update")):
+        far = kind in guide.FAR_KINDS
+        for i, l in enumerate(("Nothing within" if not far else "Nothing listed",
+                               "walking distance." if not far else "nearby.", "", "HOLD to update")):
             c.center(90 + 16 * i, l, 16)
         return
     dest = s["ui"].get("dest") or {}

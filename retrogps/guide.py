@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import random
+import re
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -16,7 +17,8 @@ from . import geo, net
 from . import config as C
 from .sayings import SAYINGS
 
-KINDS = ("coffee", "food", "todo")
+KINDS = ("coffee", "food", "beer", "todo")
+FAR_KINDS = ("beer", "todo")  # worth a longer walk
 MAX_PTS, MAX_PENDING = 64, 48
 
 
@@ -197,7 +199,7 @@ class Candidates:
         if not name or lat is None:
             return
         dist = round(geo.distance_m(self.lat, self.lon, lat, lon))
-        if dist > (C.ACTIVITY_RADIUS_M if kind == "todo" else C.WALK_RADIUS_M):
+        if dist > (C.ACTIVITY_RADIUS_M if kind in FAR_KINDS else C.WALK_RADIUS_M):
             return
         lst = self.lists[kind]
         key = "".join(ch for ch in name.lower() if ch.isalnum())[:12]
@@ -213,10 +215,28 @@ class Candidates:
                 for k, v in self.lists.items()}
 
 
-def geoapify(cands, key, kind, categories, radius):
+BREWERY_NAME = re.compile(r"brew|taproom|tap room|ale ?works|beer co|brasseur|microbrasserie", re.I)
+
+
+def beer_rank(tags, categories, name, chain):
+    """Craft breweries first, then local pubs; chains and plain bars last (None = leave out).
+    Returns (info, bonus)."""
+    craft = (tags.get("microbrewery") == "yes" or tags.get("craft") == "brewery"
+             or any(c.startswith("production") for c in categories) or bool(BREWERY_NAME.search(name or "")))
+    if chain:
+        return "chain", 1500
+    if craft:
+        return ("distillery", -1500) if "distill" in (name or "").lower() else ("brewery", -3000)
+    amenity = tags.get("amenity", "")
+    if amenity in ("pub", "biergarten"):
+        return amenity, 0
+    return None
+
+
+def geoapify(cands, key, kind, categories, radius, limit=30):
     r = net.http_json(f"https://api.geoapify.com/v2/places?categories={categories}"
                       f"&filter=circle:{cands.lon:.5f},{cands.lat:.5f},{radius}"
-                      f"&bias=proximity:{cands.lon:.5f},{cands.lat:.5f}&limit=30&apiKey={key}")
+                      f"&bias=proximity:{cands.lon:.5f},{cands.lat:.5f}&limit={limit}&apiKey={key}")
     for f in (r or {}).get("features", []):
         p = f.get("properties", {})
         raw = p.get("datasource", {}).get("raw", {})
@@ -228,6 +248,11 @@ def geoapify(cands, key, kind, categories, radius):
                 (c[20:] for c in p.get("categories", []) if c.startswith("catering.restaurant.")), "")
         elif kind == "todo":
             info = _activity_kind(raw.get("tourism"), raw.get("leisure"), raw.get("historic"))
+        elif kind == "beer":
+            ranked = beer_rank(raw, p.get("categories", []), p.get("name"), chain)
+            if ranked:
+                cands.add(kind, p.get("name"), p.get("lat"), p.get("lon"), *ranked)
+            continue
         # local spots beat chains; for things to do, places famous enough for Wikipedia come first
         bonus = (-1500 if famous else 0) if kind == "todo" else ((600 if kind == "food" else 300) if chain else 0)
         cands.add(kind, p.get("name"), p.get("lat"), p.get("lon"), info, bonus)
@@ -240,6 +265,8 @@ def overpass(cands):
          f"nwr(around:{w},{la:.5f},{lo:.5f})[shop=coffee][name];"
          f'nwr(around:{a},{la:.5f},{lo:.5f})[tourism~"^(attraction|museum|viewpoint|gallery|zoo|aquarium|theme_park)$"][name];'
          f'nwr(around:{a},{la:.5f},{lo:.5f})[leisure~"^(park|nature_reserve|garden)$"][name][wikidata];'
+         f'nwr(around:{a},{la:.5f},{lo:.5f})[amenity~"^(pub|biergarten|bar)$"][name];'
+         f"nwr(around:{a},{la:.5f},{lo:.5f})[craft=brewery][name];"
          ");out center tags;")
     for server in ("https://overpass-api.de/api/interpreter",
                    "https://overpass.private.coffee/api/interpreter",
@@ -257,6 +284,10 @@ def overpass(cands):
             cands.add("coffee", t.get("name"), at.get("lat"), at.get("lon"), "", 300 if chain else 0)
         elif t.get("amenity") == "restaurant":
             cands.add("food", t.get("name"), at.get("lat"), at.get("lon"), t.get("cuisine"), 600 if chain else 0)
+        elif t.get("amenity") in ("pub", "biergarten", "bar") or t.get("craft") == "brewery":
+            ranked = beer_rank(t, [], t.get("name"), chain)
+            if ranked:
+                cands.add("beer", t.get("name"), at.get("lat"), at.get("lon"), *ranked)
         else:
             cands.add("todo", t.get("name"), at.get("lat"), at.get("lon"),
                       _activity_kind(t.get("tourism"), t.get("leisure"), None), -1500 if famous else 0)
@@ -268,6 +299,9 @@ def fetch_places(g, keys):
     if key:
         geoapify(cands, key, "coffee", "catering.cafe", C.WALK_RADIUS_M)
         geoapify(cands, key, "food", "catering.restaurant", C.WALK_RADIUS_M)
+        # a city centre has 100+ bars; fetch them all so breweries a little further off still make it
+        geoapify(cands, key, "beer", "production.brewery,catering.pub,catering.biergarten,catering.bar",
+                 C.ACTIVITY_RADIUS_M, limit=200)
         geoapify(cands, key, "todo", "tourism.attraction,tourism.sights,entertainment.museum,leisure.park",
                  C.ACTIVITY_RADIUS_M)
     else:
@@ -290,7 +324,7 @@ def geojson(store):
                  "place": ", ".join(x for x in (w.get("area"), w.get("city"), w.get("province")) if x),
                  "weather": f"{round(w.get('temp', 0))}°C {geo.weather_text(w.get('code', -1))}",
                  "elevation": f"{w.get('elevation', 0)} m"}
-        for k, label in (("coffee", "coffee"), ("food", "food"), ("todo", "to do")):
+        for k, label in (("coffee", "coffee"), ("food", "food"), ("beer", "beer"), ("todo", "to do")):
             props[label] = ", ".join(f"{p['name']} ({p['dist']}m)" for p in w.get("places", {}).get(k, []))
         feats.append({"type": "Feature", "properties": props,
                       "geometry": {"type": "Point", "coordinates": [w["lon"], w["lat"]]}})

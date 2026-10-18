@@ -16,7 +16,7 @@ const m=L.map('m');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 fetch('/trip.geojson').then(r=>r.json()).then(g=>{const l=L.geoJSON(g,{style:{color:'#d52b1e',weight:4},
 onEachFeature:(f,x)=>{const p=f.properties;if(f.geometry.type=='Point')x.bindPopup('<b>'+e(p.title)+'</b><br>'+
-[p.when,p.place,p.weather,'Coffee: '+p.coffee,'Food: '+p.food,'To do: '+p['to do']].map(e).join('<br>'))}}).addTo(m);
+[p.when,p.place,p.weather,'Coffee: '+p.coffee,'Food: '+p.food,'Beer: '+p.beer,'To do: '+p['to do']].map(e).join('<br>'))}}).addTo(m);
 m.fitBounds(l.getBounds(),{maxZoom:15})}).catch(()=>m.setView([56,-96],3));
 </script></body></html>"""
 

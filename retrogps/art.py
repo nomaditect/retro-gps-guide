@@ -81,6 +81,18 @@ FOOD = bitmap("""
 ..#....#.
 """)
 
+BEER = bitmap("""
+.#.#.#...
+#######..
+#.....###
+#.#.#.#.#
+#.#.#.#.#
+#.#.#.###
+#.#.#.#..
+#.....#..
+#######..
+""")
+
 STAR = bitmap("""
 ....#....
 ...###...
@@ -104,7 +116,7 @@ FLAG = bitmap("""
 ###....
 """)
 
-SYMBOLS = {"coffee": COFFEE, "food": FOOD, "todo": STAR, "wpt": FLAG}
+SYMBOLS = {"coffee": COFFEE, "food": FOOD, "beer": BEER, "todo": STAR, "wpt": FLAG}
 
 BATTERY_W, BATTERY_H = 9, 14
 

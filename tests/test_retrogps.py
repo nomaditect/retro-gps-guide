@@ -103,6 +103,20 @@ class Trip(unittest.TestCase):
         c.add("coffee", "Far Away", 51.05, -114.0, "", 0)       # beyond walking distance
         self.assertEqual([p["name"] for p in c.best()["coffee"]], ["Tiny Local", "Tim Hortons"])
 
+    def test_craft_breweries_beat_pubs_and_chains(self):
+        c = guide.Candidates(51.0, -114.0)
+        for name, tags, cats, chain in (
+                ("The Canadian Brewhouse", {"amenity": "pub"}, [], True),
+                ("Rose and Crown", {"amenity": "pub"}, [], False),
+                ("Cocktail Lounge", {"amenity": "bar"}, [], False),          # left out
+                ("Steamworks", {"amenity": "pub", "microbrewery": "yes"}, [], False),
+                ("Banff Ave Brewing Company", {"amenity": "pub"}, [], False)):
+            ranked = guide.beer_rank(tags, cats, name, chain)
+            if ranked:
+                c.add("beer", name, 51.001, -114.0, *ranked)
+        self.assertEqual([p["name"] for p in c.best()["beer"]],
+                         ["Steamworks", "Banff Ave Brewing Company", "Rose and Crown", "The Canadian Brewhouse"])
+
     def test_exports(self):
         with tempfile.TemporaryDirectory() as d:
             st = guide.Store(d)

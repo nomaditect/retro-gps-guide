@@ -1,10 +1,10 @@
 # Retro GPS
 
-![Every page: mark, SkyView, map, waypoint, pointer, trip computer, weather, coffee, food, to do, Eh? and menu](docs/screens.png)
+![Every page: mark, SkyView, map, waypoint, pointer, trip computer, weather, coffee, food, beer, to do, Eh? and menu](docs/screens.png)
 
 A Garmin eTrex H-style trip logger on a **Raspberry Pi Zero 2 W** with a **Waveshare 2.13" e-Paper HAT (V4)**, used upright (122×250, like the eTrex), and a **PiSugar 3** battery. It's the bigger sibling of the [Retro Canada Guide](https://github.com/nomaditect/retro-canada-guide) and does everything that does, with the eTrex's own pages added.
 
-Four times a day (6am, 10am, 4pm and 8pm local time, wherever you are) it wakes up, joins your phone's hotspot, works out where you are from the Wi-Fi around you, marks a waypoint and finds coffee, food and things to do within walking distance. Between those it does a quick Wi-Fi scan every hour in the daytime, so the route has breadcrumbs. The Pi is fully off the rest of the time: the PiSugar's clock wakes it.
+Four times a day (6am, 10am, 4pm and 8pm local time, wherever you are) it wakes up, joins your phone's hotspot, works out where you are from the Wi-Fi around you, marks a waypoint and finds coffee, food, craft breweries and things to do nearby. Between those it does a quick Wi-Fi scan every hour in the daytime, so the route has breadcrumbs. The Pi is fully off the rest of the time: the PiSugar's clock wakes it.
 
 ## The button
 
@@ -27,9 +27,9 @@ When the Pi is off, a tap turns it on. Holding the button for a long time asks i
 5. **Pointer**: a compass ring with a big arrow to your destination, the distance and the walking time. The Pi has no compass, so the ring is north-up: turn until its N faces real north. *2x: next destination*
 6. **Trip Computer**: five eTrex boxes: trip distance, waypoints, days out, elevation and provinces. *2x: sunrise, sunset, next mark, battery and time*
 7. **Weather**: neighbourhood, city and province, temperature, high and low, sunrise and sunset, and the next three days
-8. **Coffee**, 9. **Food**, 10. **To do**: the nearest four, with distance, walking time and an arrow pointing the way (local places rank above chains; famous sights come first). *2x: GOTO the next one (it's highlighted, and the Pointer and Map point at it)*
-11. **Eh?**: a Canadian saying picked to suit the province, the weather and the time of day. *2x: another one*
-12. **Menu**: MARK, WAYPOINTS (pick one to GOTO), WEB MAP and SETUP (sync now, rotate screen, new trip, sleep now), with the time, date and battery
+8. **Coffee**, 9. **Food**, 10. **Beer**, 11. **To do**: the nearest four, with distance, walking time and an arrow pointing the way. Local places rank above chains; on Beer, craft breweries (and Québec's microbrasseries) within 2 km come first, then local pubs; famous sights come first on To do. *2x: GOTO the next one (it's highlighted, and the Pointer and Map point at it)*
+12. **Eh?**: a Canadian saying picked to suit the province, the weather and the time of day. *2x: another one*
+13. **Menu**: MARK, WAYPOINTS (pick one to GOTO), WEB MAP and SETUP (sync now, rotate screen, new trip, sleep now), with the time, date and battery
 
 **Web map**: on your phone, scan the QR code (same Wi-Fi as the Pi) to see the whole trip on a map, with popups for each waypoint, or download it as GPX or GeoJSON. It stays on for 10 minutes; hold to stop.
 
@@ -40,7 +40,7 @@ The screen keeps its last picture while the Pi is off, so it always shows someth
 | What | Service | Key |
 |---|---|---|
 | Position (from nearby Wi-Fi) | [Google Geolocation API](https://developers.google.com/maps/documentation/geolocation), or [BeaconDB](https://beacondb.net) without a key | optional, but much more accurate |
-| Coffee, food, things to do | [Geoapify Places](https://www.geoapify.com/places-api), or OpenStreetMap's Overpass without a key | free key recommended |
+| Coffee, food, beer, things to do | [Geoapify Places](https://www.geoapify.com/places-api), or OpenStreetMap's Overpass without a key | free key recommended |
 | Weather, forecast, sunrise, elevation, time zone | [Open-Meteo](https://open-meteo.com) | none |
 | Place names | [Nominatim](https://nominatim.org) (OpenStreetMap) | none |
 
