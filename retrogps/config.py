@@ -19,7 +19,10 @@ STALE_AFTER_H = 3              # waking by hand with older data than this syncs 
 
 WALK_RADIUS_M = 800            # about 10 minutes on foot
 ACTIVITY_RADIUS_M = 2000
+GYM_RADIUS_M = 8000            # CrossFit boxes are few and far between
+DRIVE_OVER_M = 3000            # further than this, show a driving time instead of a walk
 WALK_M_PER_MIN = 80
+DRIVE_M_PER_MIN = 600          # about 36 km/h door to door in town
 ROUGH_FIX_M = 3000             # worse than this (an IP address guess): skip nearby places
 PLACES_PER_LIST = 4
 

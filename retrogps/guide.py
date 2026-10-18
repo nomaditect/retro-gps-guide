@@ -17,8 +17,9 @@ from . import geo, net
 from . import config as C
 from .sayings import SAYINGS
 
-KINDS = ("coffee", "food", "beer", "todo")
-FAR_KINDS = ("beer", "todo")  # worth a longer walk
+KINDS = ("coffee", "food", "beer", "todo", "gym")
+RADIUS = {"coffee": C.WALK_RADIUS_M, "food": C.WALK_RADIUS_M, "beer": C.ACTIVITY_RADIUS_M,
+          "todo": C.ACTIVITY_RADIUS_M, "gym": C.GYM_RADIUS_M}
 MAX_PTS, MAX_PENDING = 64, 48
 
 
@@ -199,7 +200,7 @@ class Candidates:
         if not name or lat is None:
             return
         dist = round(geo.distance_m(self.lat, self.lon, lat, lon))
-        if dist > (C.ACTIVITY_RADIUS_M if kind in FAR_KINDS else C.WALK_RADIUS_M):
+        if dist > RADIUS[kind]:
             return
         lst = self.lists[kind]
         key = "".join(ch for ch in name.lower() if ch.isalnum())[:12]
@@ -233,6 +234,25 @@ def beer_rank(tags, categories, name, chain):
     return None
 
 
+GYM_NAME = re.compile(r"barbell|strength|athletic|functional|conditioning|performance|bootcamp|"
+                      r"hiit|weightlifting|lifting|fitness|gym|training", re.I)
+NOT_A_BOX = re.compile(r"yoga|pilates|barre|spin|cycl|dance|climb|bould|massage|physio|aquatic|swim|"
+                       r"martial|karate|jiu|kickbox|boxing|golf|tennis|squash|curling|arena|rink", re.I)
+
+
+def gym_rank(tags, name, chain):
+    """CrossFit first, then independent strength and fitness gyms, chains last; studios that
+    aren't a box (yoga, spin, climbing...) are left out (None). Returns (info, bonus)."""
+    name = name or ""
+    if "crossfit" in name.lower().replace(" ", "") or "crossfit" in str(tags.get("sport", "")).lower():
+        return ("" if "crossfit" in name.lower().replace(" ", "") else "crossfit"), -20000
+    if NOT_A_BOX.search(name):
+        return None
+    if chain:
+        return "chain", 3000
+    return ("gym", 0) if GYM_NAME.search(name) else ("gym", 1500)
+
+
 def geoapify(cands, key, kind, categories, radius, limit=30):
     r = net.http_json(f"https://api.geoapify.com/v2/places?categories={categories}"
                       f"&filter=circle:{cands.lon:.5f},{cands.lat:.5f},{radius}"
@@ -248,6 +268,11 @@ def geoapify(cands, key, kind, categories, radius, limit=30):
                 (c[20:] for c in p.get("categories", []) if c.startswith("catering.restaurant.")), "")
         elif kind == "todo":
             info = _activity_kind(raw.get("tourism"), raw.get("leisure"), raw.get("historic"))
+        elif kind == "gym":
+            ranked = gym_rank(raw, p.get("name"), chain)
+            if ranked:
+                cands.add(kind, p.get("name"), p.get("lat"), p.get("lon"), *ranked)
+            continue
         elif kind == "beer":
             ranked = beer_rank(raw, p.get("categories", []), p.get("name"), chain)
             if ranked:
@@ -267,6 +292,7 @@ def overpass(cands):
          f'nwr(around:{a},{la:.5f},{lo:.5f})[leisure~"^(park|nature_reserve|garden)$"][name][wikidata];'
          f'nwr(around:{a},{la:.5f},{lo:.5f})[amenity~"^(pub|biergarten|bar)$"][name];'
          f"nwr(around:{a},{la:.5f},{lo:.5f})[craft=brewery][name];"
+         f"nwr(around:{C.GYM_RADIUS_M},{la:.5f},{lo:.5f})[leisure=fitness_centre][name];"
          ");out center tags;")
     for server in ("https://overpass-api.de/api/interpreter",
                    "https://overpass.private.coffee/api/interpreter",
@@ -284,6 +310,10 @@ def overpass(cands):
             cands.add("coffee", t.get("name"), at.get("lat"), at.get("lon"), "", 300 if chain else 0)
         elif t.get("amenity") == "restaurant":
             cands.add("food", t.get("name"), at.get("lat"), at.get("lon"), t.get("cuisine"), 600 if chain else 0)
+        elif t.get("leisure") == "fitness_centre":
+            ranked = gym_rank(t, t.get("name"), chain)
+            if ranked:
+                cands.add("gym", t.get("name"), at.get("lat"), at.get("lon"), *ranked)
         elif t.get("amenity") in ("pub", "biergarten", "bar") or t.get("craft") == "brewery":
             ranked = beer_rank(t, [], t.get("name"), chain)
             if ranked:
@@ -302,6 +332,7 @@ def fetch_places(g, keys):
         # a city centre has 100+ bars; fetch them all so breweries a little further off still make it
         geoapify(cands, key, "beer", "production.brewery,catering.pub,catering.biergarten,catering.bar",
                  C.ACTIVITY_RADIUS_M, limit=200)
+        geoapify(cands, key, "gym", "sport.fitness", C.GYM_RADIUS_M, limit=500)
         geoapify(cands, key, "todo", "tourism.attraction,tourism.sights,entertainment.museum,leisure.park",
                  C.ACTIVITY_RADIUS_M)
     else:
@@ -324,7 +355,7 @@ def geojson(store):
                  "place": ", ".join(x for x in (w.get("area"), w.get("city"), w.get("province")) if x),
                  "weather": f"{round(w.get('temp', 0))}°C {geo.weather_text(w.get('code', -1))}",
                  "elevation": f"{w.get('elevation', 0)} m"}
-        for k, label in (("coffee", "coffee"), ("food", "food"), ("beer", "beer"), ("todo", "to do")):
+        for k, label in (("coffee", "coffee"), ("food", "food"), ("beer", "beer"), ("todo", "to do"), ("gym", "crossfit")):
             props[label] = ", ".join(f"{p['name']} ({p['dist']}m)" for p in w.get("places", {}).get(k, []))
         feats.append({"type": "Feature", "properties": props,
                       "geometry": {"type": "Point", "coordinates": [w["lon"], w["lat"]]}})

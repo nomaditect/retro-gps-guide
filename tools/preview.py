@@ -41,6 +41,8 @@ def sample_state():
                      p("Three Bears Brewery", "brewery", -0.0014, 0.0011),
                      p("Waldhaus Pub & Biergarten", "pub", -0.0072, 0.0050),
                      p("The Canadian Brewhouse", "chain", 0.0004, -0.0008)],
+            "gym": [p("Bow Valley CrossFit", "crossfit", 0.0310, 0.0420),
+                    p("Banff Fitness Studio", "gym", 0.0021, -0.0012)],
             "todo": [p("Cave and Basin National Historic Site", "museum", -0.006, -0.012),
                      p("Bow Falls", "viewpoint", -0.008, 0.006), p("Banff Park Museum", "museum", -0.003, 0.001),
                      p("Central Park", "park", -0.002, -0.003)],

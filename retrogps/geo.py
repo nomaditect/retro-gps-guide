@@ -51,6 +51,14 @@ def walk_min(m, per_min):
     return max(1, round(m / per_min))
 
 
+def travel(m, walk_per_min, drive_per_min, drive_over):
+    """'6min' on foot, or '8min drive' when it's too far to walk."""
+    if m <= drive_over:
+        return f"{walk_min(m, walk_per_min)}min"
+    mins = walk_min(m, drive_per_min)
+    return (f"{mins // 60}h{mins % 60:02d}" if mins >= 60 else f"{mins}min") + " drive"
+
+
 def time_of_day(hour):
     if 5 <= hour < 12:
         return "MORNING"

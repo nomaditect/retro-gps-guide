@@ -13,11 +13,11 @@ from . import guide
 from .sayings import SAYINGS
 
 W, H = C.W, C.H
-PAGES = ("mark", "sky", "map", "waypoint", "pointer", "trip", "weather", "coffee", "food", "beer", "todo", "eh", "menu")
+PAGES = ("mark", "sky", "map", "waypoint", "pointer", "trip", "weather", "coffee", "food", "beer", "todo", "gym", "eh", "menu")
 MENU_ITEMS = ("MARK", "WAYPOINTS", "WEB MAP", "SETUP")
 SETUP_ITEMS = ("SYNC NOW", "ROTATE SCREEN", "NEW TRIP", "SLEEP NOW")
 ZOOMS = (None, 200, 500, 1000, 2000, 5000, 20000, 100000, 500000)  # metres per 100 px; None = auto
-TITLES = {"coffee": "COFFEE", "food": "FOOD", "beer": "BEER", "todo": "TO DO"}
+TITLES = {"coffee": "COFFEE", "food": "FOOD", "beer": "BEER", "todo": "TO DO", "gym": "CROSSFIT"}
 
 _fonts = {}
 
@@ -248,7 +248,7 @@ def page_map(c, s, ctx):
     dest = s["ui"].get("dest")
     zoom = ZOOMS[s["ui"].get("zoom", 0) % len(ZOOMS)]
     if zoom is None:  # auto: fit nearby places and the destination
-        far = [p["dist"] for k in guide.KINDS for p in places.get(k, [])]
+        far = [p["dist"] for k in guide.KINDS for p in places.get(k, []) if p["dist"] <= C.ACTIVITY_RADIUS_M]
         if dest:
             far.append(geo.distance_m(lat0, lon0, dest["lat"], dest["lon"]))
         span = max(far + [300]) * 2.3
@@ -381,9 +381,8 @@ def page_pointer(c, s, ctx):
         name = dest.get("name") or "WAYPOINT"
         c.center(14, c.fit(name.upper(), 16, W - 8), 16)
         c.center(40, geo.fmt_dist(dist), 32, bold=True)
-        mins = geo.walk_min(dist, C.WALK_M_PER_MIN)
-        togo = (f"{mins // 60}:{mins % 60:02d}" if mins >= 60 else f"{mins}min") + " TO GO"
-        c.center(53, togo if dist < 20000 else "BY CAR", 16)
+        togo = geo.travel(dist, C.WALK_M_PER_MIN, C.DRIVE_M_PER_MIN, C.DRIVE_OVER_M).upper()
+        c.center(53, togo.replace(" DRIVE", " BY CAR") if "DRIVE" in togo else togo + " TO GO", 16)
     # ring
     c.grey(0, 58, W - 1, 192, light=True)
     cx, cy, r = W // 2, 125, 54
@@ -489,7 +488,7 @@ def page_places(c, s, ctx, kind):
         return
     places = (g.get("places") or {}).get(kind, [])
     if not places:
-        far = kind in guide.FAR_KINDS
+        far = guide.RADIUS[kind] > C.WALK_RADIUS_M
         for i, l in enumerate(("Nothing within" if not far else "Nothing listed",
                                "walking distance." if not far else "nearby.", "", "HOLD to update")):
             c.center(90 + 16 * i, l, 16)
@@ -508,7 +507,8 @@ def page_places(c, s, ctx, kind):
             c.text(4, y + 14 + 16 * j, l, 20, fill=1 if chosen else 0)
         yy = y + 16 * len(lines) + 15
         small_arrow(c, 8, yy - 5, p["bearing"])
-        d = f"{geo.fmt_dist(p['dist'])} {geo.walk_min(p['dist'], C.WALK_M_PER_MIN)}min"
+        d = f"{geo.fmt_dist(p['dist'])} " + geo.travel(p["dist"], C.WALK_M_PER_MIN, C.DRIVE_M_PER_MIN,
+                                                          C.DRIVE_OVER_M)
         c.text(17, yy, d, 16)
         if p.get("info"):
             x = 17 + c.tw(d, 16) + 6

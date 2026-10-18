@@ -40,6 +40,11 @@ class Geo(unittest.TestCase):
         self.assertEqual(geo.fmt_coord(-115.5708, False), "W115°34.248'")
         self.assertEqual(geo.fmt_coord(-0.99999999, True), "S 01°00.000'")
 
+    def test_travel_time(self):
+        self.assertEqual(geo.travel(400, 80, 600, 3000), "5min")
+        self.assertEqual(geo.travel(4500, 80, 600, 3000), "8min drive")
+        self.assertEqual(geo.travel(60000, 80, 600, 3000), "1h40 drive")
+
     def test_compass(self):
         self.assertEqual([geo.compass(d) for d in (0, 44, 90, 200, 350)], ["N", "NE", "E", "S", "N"])
 
@@ -116,6 +121,17 @@ class Trip(unittest.TestCase):
                 c.add("beer", name, 51.001, -114.0, *ranked)
         self.assertEqual([p["name"] for p in c.best()["beer"]],
                          ["Steamworks", "Banff Ave Brewing Company", "Rose and Crown", "The Canadian Brewhouse"])
+
+    def test_crossfit_first_then_gyms_no_studios(self):
+        c = guide.Candidates(51.0, -114.0)
+        for name, tags, chain in (("World Gym", {}, True), ("Hot Yoga Loft", {}, False),
+                                  ("Iron Barbell Club", {}, False), ("Dynasty Gym/Palace", {"sport": "crossfit;fitness"}, False),
+                                  ("Cross Fit Pyro", {}, False)):
+            ranked = guide.gym_rank(tags, name, chain)
+            if ranked:
+                c.add("gym", name, 51.02, -114.0, *ranked)
+        self.assertEqual([p["name"] for p in c.best()["gym"]],
+                         ["Dynasty Gym/Palace", "Cross Fit Pyro", "Iron Barbell Club", "World Gym"])
 
     def test_exports(self):
         with tempfile.TemporaryDirectory() as d:
