@@ -254,9 +254,12 @@ def gym_rank(tags, name, chain):
 
 
 def geoapify(cands, key, kind, categories, radius, limit=30):
-    r = net.http_json(f"https://api.geoapify.com/v2/places?categories={categories}"
-                      f"&filter=circle:{cands.lon:.5f},{cands.lat:.5f},{radius}"
-                      f"&bias=proximity:{cands.lon:.5f},{cands.lat:.5f}&limit={limit}&apiKey={key}")
+    url = (f"https://api.geoapify.com/v2/places?categories={categories}"
+           f"&filter=circle:{cands.lon:.5f},{cands.lat:.5f},{radius}"
+           f"&bias=proximity:{cands.lon:.5f},{cands.lat:.5f}&limit={limit}&apiKey={key}")
+    # big city queries (hundreds of gyms or bars) can be slow over a phone hotspot: wait longer, retry once
+    timeout = 15 if limit <= 30 else 40
+    r = net.http_json(url, timeout=timeout) or net.http_json(url, timeout=timeout)
     for f in (r or {}).get("features", []):
         p = f.get("properties", {})
         raw = p.get("datasource", {}).get("raw", {})
