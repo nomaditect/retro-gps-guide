@@ -39,6 +39,10 @@ for f in /etc/NetworkManager/conf.d/*.conf; do  # pwnagotchi leaves wlan0 unmana
         && echo "nm-conf $f" >> "$UNDO"
 done
 systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+# don't hold up boot waiting for a network we may not have
+if [ "$(systemctl is-enabled NetworkManager-wait-online.service 2>/dev/null || true)" = enabled ]; then
+    systemctl disable NetworkManager-wait-online.service >/dev/null 2>&1 || true
+fi
 
 # ---- secrets and Wi-Fi profiles (hidden=yes so an iPhone hotspot is found even when it's quiet)
 if [ -f "$HERE/secrets.toml" ]; then
