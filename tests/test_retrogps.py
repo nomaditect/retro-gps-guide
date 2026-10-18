@@ -4,6 +4,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -260,7 +261,8 @@ class UI(unittest.TestCase):
     def test_scheduled_wake_powers_off_by_itself(self):
         self.store.s["sched"].update(next_update=time.time() + 3600, next_track=time.time() + 3600)
         start = time.monotonic()
-        self.app.run(alarm_wake=True)
+        with unittest.mock.patch("retrogps.main.usb_tethered", return_value=False):  # even on a plugged-in Pi
+            self.app.run(alarm_wake=True)
         self.assertLess(time.monotonic() - start, 2)
         self.assertIn("alarm_at", self.store.s["sched"])
 
